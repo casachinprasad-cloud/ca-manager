@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Client Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root {
+  --bg: #f4f3ef;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: #e2e0d8;
+  --text: #1a1917;
+  --muted: #6b6963;
+  --accent: #2d5a3d;
+  --accent-light: #e8f2eb;
+  --danger: #8b2020;
+  --danger-light: #fdeaea;
+  --amber: #7a5a0a;
+  --amber-light: #fdf6e3;
+  --info: #1a3d6b;
+  --info-light: #e8eef8;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+/* ===== LOGIN SCREEN ===== */
+#loginScreen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.login-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 24px;
+  padding: 3rem 2.5rem; text-align: center; max-width: 400px; width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+}
+.login-box h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+.login-box p { color: var(--muted); font-size: 14px; margin-bottom: 2rem; line-height: 1.6; }
+.login-box .logo { font-size: 52px; margin-bottom: 1rem; }
+.google-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius);
+  padding: 12px 24px; font-size: 15px; font-family: inherit; cursor: pointer;
+  color: var(--text); font-weight: 500; width: 100%; transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.google-btn:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.google-logo { width: 20px; height: 20px; }
+.login-note { font-size: 12px; color: var(--muted); margin-top: 1.25rem; line-height: 1.5; }
+
+/* ===== MAIN APP ===== */
+#mainApp { display: none; }
+.header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 12px; }
+.header-left h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+.header-left p { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.user-chip { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 30px; padding: 5px 12px 5px 5px; font-size: 13px; }
+.user-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.user-avatar-text { width: 28px; height: 28px; border-radius: 50%; background: var(--info); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+.btn-primary { background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: 10px 18px; font-size: 14px; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.15s; white-space: nowrap; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-outline { background: none; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+.btn-outline:hover { background: var(--surface2); }
+
+/* Drive Status */
+.drive-status { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; border-radius: 20px; margin-bottom: 1.25rem; width: fit-content; }
+.drive-status.connected { background: var(--accent-light); color: var(--accent); }
+.drive-status.syncing { background: var(--amber-light); color: var(--amber); }
+.drive-status.error { background: var(--danger-light); color: var(--danger); }
+.drive-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.drive-dot.pulse { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 2rem; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; }
+.stat .num { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.stat .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius); padding: 4px; margin-bottom: 1.5rem; width: fit-content; }
+.tab { padding: 7px 18px; font-size: 13px; font-family: inherit; border: none; background: none; cursor: pointer; color: var(--muted); border-radius: 7px; transition: all 0.15s; }
+.tab.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+.section { display: none; }
+.section.active { display: block; }
+
+.filter-bar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+.filter-bar input, .filter-bar select { font-family: inherit; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; }
+.filter-bar input { flex: 1; min-width: 180px; }
+.filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent); }
+
+.client-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; margin-bottom: 10px; transition: box-shadow 0.15s; }
+.client-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.card-left { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--info-light); color: var(--info); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.client-name { font-size: 15px; font-weight: 500; }
+.client-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.icon-btn { background: none; border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; color: var(--muted); transition: all 0.15s; }
+.icon-btn:hover { background: var(--surface2); }
+.icon-btn.del:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-light); }
+.icon-btn.doc-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+.badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+.badge-active { background: var(--accent-light); color: var(--accent); }
+.badge-inactive { background: var(--surface2); color: var(--muted); }
+.badge-gst { background: var(--info-light); color: var(--info); }
+.badge-itr { background: #f0ebfe; color: #4b2fa0; }
+.badge-audit { background: var(--amber-light); color: var(--amber); }
+.badge-tds { background: #e6f7f4; color: #0d5c4a; }
+.badge-overdue { background: var(--danger-light); color: var(--danger); }
+.badge-soon { background: var(--amber-light); color: var(--amber); }
+.badge-ok { background: var(--surface2); color: var(--muted); }
+.badge-doc { background: #f0ebfe; color: #4b2fa0; cursor: pointer; }
+.badge-doc:hover { opacity: 0.8; }
+
+.expand-section { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); grid-template-columns: 1fr 1fr; gap: 10px; }
+.expand-section.open { display: grid; }
+.info-block .info-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.info-block .info-val { font-size: 13px; color: var(--text); }
+
+.dl-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+.dl-item.overdue { border-color: #f5c5c5; background: #fff8f8; }
+.dl-item.soon { border-color: #f5dfa0; background: #fffcf0; }
+.dl-name { font-size: 14px; font-weight: 500; }
+.dl-reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dl-date { font-size: 13px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.dl-item.overdue .dl-date { color: var(--danger); }
+.dl-item.soon .dl-date { color: var(--amber); }
+
+/* Documents Tab */
+.doc-client-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 12px; overflow: hidden; }
+.doc-client-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; transition: background 0.15s; }
+.doc-client-header:hover { background: var(--surface2); }
+.doc-client-name { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.doc-client-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.doc-client-right { display: flex; align-items: center; gap: 10px; }
+.doc-count-badge { background: var(--accent-light); color: var(--accent); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.doc-toggle { color: var(--muted); font-size: 16px; transition: transform 0.2s; display: inline-block; }
+.doc-toggle.open { transform: rotate(180deg); }
+.doc-body { display: none; padding: 0 18px 18px; border-top: 1px solid var(--border); }
+.doc-body.open { display: block; }
+
+.doc-upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 20px; text-align: center; margin-top: 14px; cursor: pointer; transition: all 0.15s; background: var(--bg); }
+.doc-upload-zone:hover, .doc-upload-zone.drag-over { border-color: var(--accent); background: var(--accent-light); }
+.doc-upload-zone p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.doc-upload-zone .upload-icon { font-size: 28px; }
+.doc-upload-zone input[type=file] { display: none; }
+
+.doc-file-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.doc-file-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.doc-file-icon { font-size: 22px; flex-shrink: 0; }
+.doc-file-name { font-size: 13px; font-weight: 500; word-break: break-all; }
+.doc-file-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.doc-file-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.doc-action-btn { background: none; border: 1px solid var(--border); border-radius: 7px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: var(--muted); transition: all 0.15s; text-decoration: none; }
+.doc-action-btn:hover { background: var(--surface2); }
+.doc-action-btn.del:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-light); }
+.doc-action-btn.drive:hover { border-color: #1a73e8; color: #1a73e8; background: #e8f0fe; }
+.doc-file-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-right: 4px; background: var(--info-light); color: var(--info); }
+
+/* Upload progress */
+.upload-progress { margin-top: 10px; }
+.progress-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 6px; }
+.progress-item-name { font-size: 12px; font-weight: 500; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.progress-bar-wrap { background: var(--surface2); border-radius: 10px; height: 5px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--accent); border-radius: 10px; transition: width 0.3s; }
+.progress-bar.done { background: #2ecc71; }
+.progress-bar.error { background: var(--danger); }
+
+/* Modal */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.modal-bg.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.75rem; width: 500px; max-width: 95vw; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border); }
+.modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 1.25rem; }
+.form-row { margin-bottom: 13px; }
+.form-row label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.form-row input, .form-row select, .form-row textarea { width: 100%; font-family: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent); }
+.form-row textarea { height: 70px; resize: none; }
+.cb-group { display: flex; gap: 14px; flex-wrap: wrap; }
+.cb-group label { font-size: 13px; text-transform: none; letter-spacing: 0; display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
+.btn-cancel { padding: 9px 18px; font-size: 14px; font-family: inherit; border: 1px solid var(--border); border-radius: var(--radius); background: none; cursor: pointer; color: var(--text); }
+.btn-cancel:hover { background: var(--surface2); }
+
+.quick-doc-modal { width: 620px; }
+.doc-tag-row { display: flex; gap: 6px; margin-top: 12px; }
+.doc-tag-row input { flex: 1; font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; }
+.doc-tag-row input:focus { border-color: var(--accent); }
+.doc-tag-row select { font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; }
+.quick-doc-list { max-height: 300px; overflow-y: auto; margin-top: 12px; }
+.doc-section-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 8px; }
+
+.empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+.empty span { font-size: 36px; display: block; margin-bottom: 10px; }
+
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; z-index: 999; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--accent); }
+.toast.error { background: var(--danger); }
+
+@media (max-width: 600px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .card-actions { gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="logo">⚖️</div>
+    <h1>CA Client Manager</h1>
+    <p>Apne sabhi clients ka data aur documents Google Drive pe securely save karein — kahin se bhi access karein</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Google se Sign In karein
+    </button>
+    <p class="login-note">🔒 Aapka data sirf aapke Google Drive mein save hoga.<br>Koi third-party server nahi — poori privacy aapki.</p>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="mainApp">
+  <div class="app">
+    <div class="header">
+      <div class="header-left">
+        <h1>⚖️ CA Client Manager</h1>
+        <p>Apne sabhi clients ka data ek jagah manage karein</p>
+      </div>
+      <div class="header-right">
+        <div class="user-chip">
+          <img id="userAvatar" class="user-avatar" src="" alt="" onerror="this.style.display='none'">
+          <span id="userName" style="font-size:13px"></span>
+        </div>
+        <button class="btn-primary" onclick="openAddModal()">＋ Client Add Karein</button>
+        <button class="btn-outline" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="drive-status connected" id="driveStatus">
+      <span class="drive-dot"></span>
+      <span id="driveStatusText">Google Drive se connected</span>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('clients',this)">👥 Clients</button>
+      <button class="tab" onclick="switchTab('deadlines',this)">📅 Deadlines</button>
+      <button class="tab" onclick="switchTab('docs',this)">📁 Documents</button>
+    </div>
+
+    <div id="clients" class="section active">
+      <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="Client naam ya PAN se search karein..." oninput="renderClients()">
+        <select id="filterType" onchange="renderClients()">
+          <option value="">Sabhi Services</option>
+          <option value="GST">GST</option>
+          <option value="ITR">ITR</option>
+          <option value="Audit">Audit</option>
+          <option value="TDS">TDS</option>
+        </select>
+        <select id="filterStatus" onchange="renderClients()">
+          <option value="">Sabhi Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+      <div id="clientList"></div>
+    </div>
+
+    <div id="deadlines" class="section">
+      <div id="deadlineList"></div>
+    </div>
+
+    <div id="docs" class="section">
+      <div class="filter-bar">
+        <input type="text" id="docSearch" placeholder="Client naam ya document se search karein..." oninput="renderDocsTab()">
+        <select id="docTagFilter" onchange="renderDocsTab()">
+          <option value="">Sabhi Categories</option>
+          <option value="GST">GST</option>
+          <option value="ITR">ITR</option>
+          <option value="Audit">Audit</option>
+          <option value="TDS">TDS</option>
+          <option value="Balance Sheet">Balance Sheet</option>
+          <option value="P&L">P&L</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div id="docList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Client Modal -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">Naya Client Add Karein</h2>
+    <div class="form-row"><label>Client ka Naam *</label><input type="text" id="f-name" placeholder="e.g. Sharma Enterprises"></div>
+    <div class="form-row"><label>PAN Number</label><input type="text" id="f-pan" placeholder="e.g. ABCDE1234F" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="form-row"><label>GSTIN</label><input type="text" id="f-gst" placeholder="e.g. 07ABCDE1234F1Z5"></div>
+    <div class="form-row"><label>Mobile Number</label><input type="text" id="f-mobile" placeholder="e.g. 9876543210"></div>
+    <div class="form-row"><label>Email</label><input type="email" id="f-email" placeholder="e.g. client@example.com"></div>
+    <div class="form-row"><label>Business Type</label>
+      <select id="f-btype">
+        <option>Proprietorship</option><option>Partnership</option><option>Private Limited</option><option>LLP</option><option>Individual</option><option>HUF</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Services</label>
+      <div class="cb-group">
+        <label><input type="checkbox" id="s-gst"> GST</label>
+        <label><input type="checkbox" id="s-itr"> ITR</label>
+        <label><input type="checkbox" id="s-audit"> Audit</label>
+        <label><input type="checkbox" id="s-tds"> TDS</label>
+      </div>
+    </div>
+    <div class="form-row"><label>Next Deadline</label><input type="date" id="f-deadline"></div>
+    <div class="form-row"><label>Deadline ka Reason</label><input type="text" id="f-dlreason" placeholder="e.g. GST Return July 2025"></div>
+    <div class="form-row"><label>Notes</label><textarea id="f-notes" placeholder="Koi bhi important note..."></textarea></div>
+    <div class="form-row"><label>Status</label>
+      <select id="f-status"><option>Active</option><option>Inactive</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveClient()">💾 Save Karein</button>
+    </div>
+  </div>
+</div>
+
+<!-- Document Modal -->
+<div class="modal-bg" id="docModalBg" onclick="if(event.target===this)closeDocModal()">
+  <div class="modal quick-doc-modal">
+    <h2 id="docModalTitle">📁 Documents</h2>
+    <div class="doc-upload-zone" id="docDropZone"
+         onclick="document.getElementById('docFileInput').click()"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <div class="upload-icon">☁️</div>
+      <strong style="font-size:14px">Files yahan drop karein ya click karein</strong>
+      <p>PDF, Excel, Word, Images — seedha Google Drive pe save hoga</p>
+      <input type="file" id="docFileInput" multiple onchange="handleFileSelect(event)">
+    </div>
+    <div class="doc-tag-row">
+      <input type="text" id="docTagName" placeholder="Document naam (optional)">
+      <select id="docTagCat">
+        <option value="GST">GST</option>
+        <option value="ITR">ITR</option>
+        <option value="Audit">Audit</option>
+        <option value="TDS">TDS</option>
+        <option value="Balance Sheet">Balance Sheet</option>
+        <option value="P&L">P&L</option>
+        <option value="Other" selected>Other</option>
+      </select>
+    </div>
+    <div class="upload-progress" id="uploadProgress"></div>
+    <div class="doc-section-title">Uploaded Documents</div>
+    <div class="quick-doc-list" id="quickDocList"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading...</div></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDocModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CONFIG =====
+const CLIENT_ID = '92852241932-9pukshti6cpkea0v83f4skqlpcaqrkp7.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata';
+const DATA_FILE_NAME = 'ca_manager_data.json';
+const FOLDER_NAME = 'CA Client Manager';
+
+// ===== STATE =====
+let accessToken = null;
+let clients = [];
+let editId = null;
+let activeDocClientId = null;
+let rootFolderId = null;
+let clientFolders = {}; // clientId -> driveFileId
+let dataFileId = null;
+let docMeta = {}; // clientId -> [{driveFileId, name, displayName, category, size, uploadedAt}]
+
+// ===== TOAST =====
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function setDriveStatus(state, text) {
+  const el = document.getElementById('driveStatus');
+  const dot = el.querySelector('.drive-dot');
+  el.className = 'drive-status ' + state;
+  document.getElementById('driveStatusText').textContent = text;
+  dot.className = 'drive-dot' + (state === 'syncing' ? ' pulse' : '');
+}
+
+// ===== AUTH =====
+function signIn() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Login fail hua: ' + resp.error, 'error'); return; }
+      accessToken = resp.access_token;
+      // Get user info
+      try {
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + accessToken }
+        });
+        const u = await r.json();
+        document.getElementById('userName').textContent = u.name || u.email;
+        const av = document.getElementById('userAvatar');
+        if (u.picture) av.src = u.picture; else av.style.display = 'none';
+      } catch(e) {}
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      await initDrive();
+    }
+  });
+  client.requestAccessToken();
+}
+
+function signOut() {
+  if (!confirm('Sign out karna chahte hain?')) return;
+  google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null; clients = []; docMeta = {}; rootFolderId = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+// ===== DRIVE HELPERS =====
+async function driveReq(url, opts={}) {
+  const headers = { Authorization: 'Bearer ' + accessToken, ...opts.headers };
+  const res = await fetch(url, { ...opts, headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || res.statusText);
+  }
+  return res.json();
+}
+
+async function findOrCreateFolder(name, parentId=null) {
+  // Search
+  let q = `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  if (parentId) q += ` and '${parentId}' in parents`;
+  const res = await driveReq(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`);
+  if (res.files && res.files.length > 0) return res.files[0].id;
+  // Create
+  const body = { name, mimeType: 'application/vnd.google-apps.folder' };
+  if (parentId) body.parents = [parentId];
+  const f = await driveReq('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return f.id;
+}
+
+async function uploadJSON(name, data, fileId=null) {
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const meta = fileId ? {} : { name, parents: [rootFolderId] };
+  const form = new FormData();
+  if (!fileId) form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', blob);
+  const url = fileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart&fields=id`
+    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`;
+  const res = await fetch(url, {
+    method: fileId ? 'PATCH' : 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    body: form
+  });
+  return (await res.json()).id;
+}
+
+async function uploadFileToDrive(file, parentFolderId, displayName, category) {
+  const meta = {
+    name: file.name,
+    parents: [parentFolderId],
+    description: JSON.stringify({ displayName, category, uploadedAt: Date.now() })
+  };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', file);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    body: form
+  });
+  return await res.json();
+}
+
+async function deleteFromDrive(fileId) {
+  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+}
+
+async function listFilesInFolder(folderId) {
+  const q = `'${folderId}' in parents and trashed=false and mimeType!='application/vnd.google-apps.folder'`;
+  const res = await driveReq(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,size,description,webViewLink,createdTime)&pageSize=100`);
+  return res.files || [];
+}
+
+// ===== INIT DRIVE =====
+async function initDrive() {
+  try {
+    setDriveStatus('syncing', 'Drive se connect ho raha hai...');
+    rootFolderId = await findOrCreateFolder(FOLDER_NAME);
+
+    // Load data file
+    const q = `name='${DATA_FILE_NAME}' and '${rootFolderId}' in parents and trashed=false`;
+    const res = await driveReq(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
+    if (res.files && res.files.length > 0) {
+      dataFileId = res.files[0].id;
+      const dataRes = await fetch(`https://www.googleapis.com/drive/v3/files/${dataFileId}?alt=media`, {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      const data = await dataRes.json();
+      clients = data.clients || [];
+      clientFolders = data.clientFolders || {};
+      docMeta = data.docMeta || {};
+    } else {
+      clients = getDefaultClients();
+      await saveData();
+    }
+
+    setDriveStatus('connected', 'Google Drive se connected ✓');
+    await refresh();
+  } catch(e) {
+    setDriveStatus('error', 'Drive error: ' + e.message);
+    showToast('Drive connect nahi hua: ' + e.message, 'error');
+  }
+}
+
+async function saveData() {
+  setDriveStatus('syncing', 'Drive pe save ho raha hai...');
+  try {
+    dataFileId = await uploadJSON(DATA_FILE_NAME, { clients, clientFolders, docMeta }, dataFileId);
+    setDriveStatus('connected', 'Google Drive pe save hua ✓');
+  } catch(e) {
+    setDriveStatus('error', 'Save fail: ' + e.message);
+    showToast('Save nahi hua!', 'error');
+  }
+}
+
+async function getClientFolder(client) {
+  if (clientFolders[client.id]) return clientFolders[client.id];
+  const folderName = `${client.name} [${client.pan || client.id}]`;
+  const fid = await findOrCreateFolder(folderName, rootFolderId);
+  clientFolders[client.id] = fid;
+  return fid;
+}
+
+// ===== HELPERS =====
+function initials(n) { return n.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2); }
+function daysLeft(d) { return Math.ceil((new Date(d) - new Date(new Date().toDateString())) / 86400000); }
+function formatSize(b) {
+  if (!b) return '—';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(2) + ' MB';
+}
+function formatDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString('hi-IN', { day:'numeric', month:'short', year:'numeric' });
+}
+function fileIcon(name='') {
+  const ext = name.split('.').pop().toLowerCase();
+  if (ext==='pdf') return '📕';
+  if (['xls','xlsx','csv'].includes(ext)) return '📗';
+  if (['doc','docx'].includes(ext)) return '📘';
+  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
+  if (['zip','rar'].includes(ext)) return '🗜️';
+  return '📄';
+}
+
+function getDefaultClients() {
+  return [
+    {id:1,name:"Sharma Enterprises",pan:"AABCS1234D",gst:"07AABCS1234D1ZP",mobile:"9810001111",email:"sharma@mail.com",btype:"Proprietorship",services:["GST","ITR"],deadline:"2025-07-20",dlreason:"GST Return Q1",notes:"Regular client, pays on time.",status:"Active"},
+    {id:2,name:"Gupta & Sons",pan:"BBBCG5678E",gst:"",mobile:"9820002222",email:"gupta@mail.com",btype:"Partnership",services:["ITR","Audit","TDS"],deadline:"2025-06-30",dlreason:"Tax Audit FY24",notes:"Audit pending documents.",status:"Active"},
+    {id:3,name:"Priya Kapoor",pan:"CCCPK9012F",gst:"",mobile:"9830003333",email:"priya.k@mail.com",btype:"Individual",services:["ITR"],deadline:"2025-07-31",dlreason:"ITR Filing FY25",notes:"Salaried employee.",status:"Active"},
+    {id:4,name:"Mehta Traders",pan:"DDDMT3456G",gst:"07DDDMT3456G1ZQ",mobile:"9840004444",email:"mehta@mail.com",btype:"Private Limited",services:["GST","TDS","Audit"],deadline:"2025-05-15",dlreason:"TDS Return Q4",notes:"Quarterly filer.",status:"Inactive"}
+  ];
+}
+
+// ===== RENDER STATS =====
+function renderStats() {
+  const total = clients.length;
+  const active = clients.filter(c=>c.status=="Active").length;
+  const overdue = clients.filter(c=>c.deadline&&daysLeft(c.deadline)<0).length;
+  const totalDocs = Object.values(docMeta).reduce((s,arr)=>s+(arr||[]).length, 0);
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="num">${total}</div><div class="lbl">Total Clients</div></div>
+    <div class="stat"><div class="num" style="color:var(--accent)">${active}</div><div class="lbl">Active</div></div>
+    <div class="stat"><div class="num" style="color:var(--danger)">${overdue}</div><div class="lbl">Overdue</div></div>
+    <div class="stat"><div class="num" style="color:#4b2fa0">${totalDocs}</div><div class="lbl">Total Documents</div></div>`;
+}
+
+// ===== RENDER CLIENTS =====
+function renderClients() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const ft = document.getElementById("filterType").value;
+  const fs = document.getElementById("filterStatus").value;
+  const filtered = clients.filter(c => {
+    const match = c.name.toLowerCase().includes(q) || (c.pan&&c.pan.toLowerCase().includes(q));
+    return match && (!ft||c.services.includes(ft)) && (!fs||c.status==fs);
+  });
+  if (!filtered.length) { document.getElementById("clientList").innerHTML='<div class="empty"><span>🔍</span>Koi client nahi mila</div>'; return; }
+  document.getElementById("clientList").innerHTML = filtered.map(c => {
+    const dl = c.deadline ? daysLeft(c.deadline) : null;
+    const dlCls = dl===null?"ok":dl<0?"overdue":dl<=7?"soon":"ok";
+    const dlText = dl===null?"—":dl<0?`${Math.abs(dl)} din overdue`:dl==0?"Aaj!":dl<=7?`${dl} din bacha`:c.deadline;
+    const docCount = (docMeta[c.id]||[]).length;
+    return `<div class="client-card">
+      <div class="card-top">
+        <div class="card-left">
+          <div class="avatar">${initials(c.name)}</div>
+          <div>
+            <div class="client-name">${c.name}</div>
+            <div class="client-meta">${c.btype} &nbsp;·&nbsp; PAN: ${c.pan||"—"} &nbsp;·&nbsp; 📞 ${c.mobile||"—"}</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="icon-btn doc-btn" title="Documents" onclick="openDocModal(${c.id})">📁</button>
+          <button class="icon-btn" title="Details" onclick="toggleExpand(${c.id})">▾</button>
+          <button class="icon-btn" title="Edit" onclick="editClient(${c.id})">✏️</button>
+          <button class="icon-btn del" title="Delete" onclick="deleteClient(${c.id})">🗑</button>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge ${c.status=='Active'?'badge-active':'badge-inactive'}">${c.status}</span>
+        ${c.services.map(s=>`<span class="badge badge-${s.toLowerCase()}">${s}</span>`).join("")}
+        ${c.deadline?`<span class="badge badge-${dlCls}">📅 ${dlText}</span>`:""}
+        ${docCount>0?`<span class="badge badge-doc" onclick="openDocModal(${c.id})">📁 ${docCount} Doc${docCount>1?'s':''}</span>`:""}
+      </div>
+      <div class="expand-section" id="exp-${c.id}">
+        <div class="info-block"><div class="info-label">GSTIN</div><div class="info-val">${c.gst||"—"}</div></div>
+        <div class="info-block"><div class="info-label">Email</div><div class="info-val">${c.email||"—"}</div></div>
+        <div class="info-block"><div class="info-label">Deadline Reason</div><div class="info-val">${c.dlreason||"—"}</div></div>
+        <div class="info-block"><div class="info-label">Documents</div><div class="info-val" style="cursor:pointer;color:var(--accent)" onclick="openDocModal(${c.id})">📁 ${docCount} file${docCount!==1?'s':''} on Drive</div></div>
+        <div class="info-block" style="grid-column:1/-1"><div class="info-label">Notes</div><div class="info-val">${c.notes||"—"}</div></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderDeadlines() {
+  const sorted = [...clients].filter(c=>c.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+  if (!sorted.length) { document.getElementById("deadlineList").innerHTML='<div class="empty"><span>📅</span>Koi deadline nahi hai</div>'; return; }
+  document.getElementById("deadlineList").innerHTML = sorted.map(c => {
+    const dl = daysLeft(c.deadline);
+    const cls = dl<0?"overdue":dl<=7?"soon":"";
+    const dlText = dl<0?`${Math.abs(dl)} din overdue`:dl==0?"Aaj!":dl<=7?`${dl} din mein`:c.deadline;
+    return `<div class="dl-item ${cls}">
+      <div><div class="dl-name">${c.name}</div><div class="dl-reason">${c.dlreason||"Deadline"}</div></div>
+      <div class="dl-date">${dlText}</div>
+    </div>`;
+  }).join("");
+}
+
+// ===== DOCS TAB =====
+function renderDocsTab() {
+  const q = (document.getElementById("docSearch")||{value:""}).value.toLowerCase();
+  const tagFilter = (document.getElementById("docTagFilter")||{value:""}).value;
+
+  const entries = clients.map(c => {
+    const docs = (docMeta[c.id]||[]).filter(d => {
+      const matchName = d.displayName.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+      const matchTag = !tagFilter || d.category === tagFilter;
+      return matchName && matchTag;
+    });
+    return { client: c, docs };
+  }).filter(g => g.docs.length > 0 || (!q && !tagFilter));
+
+  if (!entries.some(g=>g.docs.length>0)) {
+    document.getElementById("docList").innerHTML = '<div class="empty"><span>📁</span>Koi document nahi mila</div>';
+    return;
+  }
+
+  document.getElementById("docList").innerHTML = entries.filter(g=>g.docs.length>0 || !q).map(g => {
+    const c = g.client; const docs = g.docs;
+    return `<div class="doc-client-card">
+      <div class="doc-client-header" onclick="toggleDocClient(${c.id})">
+        <div>
+          <div class="doc-client-name">
+            <div class="avatar" style="width:32px;height:32px;font-size:11px">${initials(c.name)}</div>
+            ${c.name}
+          </div>
+          <div class="doc-client-meta">${c.btype} · ${c.mobile||'—'}</div>
+        </div>
+        <div class="doc-client-right">
+          ${docs.length>0?`<span class="doc-count-badge">📁 ${docs.length} file${docs.length>1?'s':''}</span>`:''}
+          <button class="btn-primary" style="font-size:12px;padding:6px 12px" onclick="event.stopPropagation();openDocModal(${c.id})">＋ Upload</button>
+          <span class="doc-toggle" id="tab-toggle-${c.id}">▾</span>
+        </div>
+      </div>
+      <div class="doc-body" id="tab-body-${c.id}">
+        ${docs.length===0
+          ? '<div style="padding:16px 0;color:var(--muted);font-size:13px;text-align:center">Koi document nahi · Upload karein ➜</div>'
+          : docs.map(d => docFileRowHTML(d)).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function toggleDocClient(id) {
+  document.getElementById("tab-body-"+id).classList.toggle("open");
+  document.getElementById("tab-toggle-"+id).classList.toggle("open");
+}
+
+function docFileRowHTML(d) {
+  return `<div class="doc-file-item">
+    <div class="doc-file-left">
+      <span class="doc-file-icon">${fileIcon(d.fileName)}</span>
+      <div>
+        <div class="doc-file-name">${d.displayName}</div>
+        <div class="doc-file-meta">${d.fileName} · ${formatSize(d.size)} · ${formatDate(d.uploadedAt)} <span class="doc-file-tag">${d.category}</span></div>
+      </div>
+    </div>
+    <div class="doc-file-actions">
+      <a class="doc-action-btn drive" href="${d.webViewLink||'#'}" target="_blank" title="Drive pe dekho">🔗</a>
+      <button class="doc-action-btn del" onclick="deleteDoc('${d.driveFileId}',${d.clientId})" title="Delete">🗑</button>
+    </div>
+  </div>`;
+}
+
+// ===== DOC MODAL =====
+async function openDocModal(clientId) {
+  activeDocClientId = clientId;
+  const c = clients.find(x=>x.id===clientId);
+  document.getElementById("docModalTitle").textContent = `📁 ${c.name} — Documents`;
+  document.getElementById("uploadProgress").innerHTML = '';
+  document.getElementById("docModalBg").classList.add("open");
+  refreshQuickDocList();
+}
+
+function closeDocModal() {
+  document.getElementById("docModalBg").classList.remove("open");
+  activeDocClientId = null;
+  refresh();
+}
+
+function refreshQuickDocList() {
+  const docs = (docMeta[activeDocClientId]||[]).slice().sort((a,b)=>b.uploadedAt-a.uploadedAt);
+  const el = document.getElementById("quickDocList");
+  if (!docs.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Abhi koi document upload nahi hua</div>';
+    return;
+  }
+  el.innerHTML = docs.map(d => `<div class="doc-file-item">
+    <div class="doc-file-left">
+      <span class="doc-file-icon">${fileIcon(d.fileName)}</span>
+      <div>
+        <div class="doc-file-name">${d.displayName}</div>
+        <div class="doc-file-meta">${d.fileName} · ${formatSize(d.size)} · ${formatDate(d.uploadedAt)} <span class="doc-file-tag">${d.category}</span></div>
+      </div>
+    </div>
+    <div class="doc-file-actions">
+      <a class="doc-action-btn drive" href="${d.webViewLink||'#'}" target="_blank" title="Drive pe dekho">🔗</a>
+      <button class="doc-action-btn del" onclick="deleteDoc('${d.driveFileId}',${d.clientId})" title="Delete">🗑</button>
+    </div>
+  </div>`).join("");
+}
+
+// ===== FILE UPLOAD =====
+function onDragOver(e) { e.preventDefault(); document.getElementById("docDropZone").classList.add("drag-over"); }
+function onDragLeave(e) { document.getElementById("docDropZone").classList.remove("drag-over"); }
+function onDrop(e) { e.preventDefault(); document.getElementById("docDropZone").classList.remove("drag-over"); handleFiles(Array.from(e.dataTransfer.files)); }
+function handleFileSelect(e) { handleFiles(Array.from(e.target.files)); e.target.value=''; }
+
+async function handleFiles(files) {
+  if (!files.length) return;
+  const client = clients.find(x=>x.id===activeDocClientId);
+  const progEl = document.getElementById("uploadProgress");
+  const customName = document.getElementById("docTagName").value.trim();
+  const category = document.getElementById("docTagCat").value;
+
+  let folderId;
+  try {
+    folderId = await getClientFolder(client);
+  } catch(e) {
+    showToast('Folder create nahi hua: ' + e.message, 'error'); return;
+  }
+
+  for (let i=0; i<files.length; i++) {
+    const file = files[i];
+    const displayName = (files.length===1 && customName) ? customName : (customName ? `${customName} (${i+1})` : file.name.replace(/\.[^/.]+$/,''));
+
+    // Progress item
+    const pid = 'prog_' + Date.now() + i;
+    progEl.insertAdjacentHTML('beforeend', `<div class="progress-item" id="${pid}">
+      <div class="progress-item-name"><span>${displayName}</span><span id="${pid}_pct">Uploading...</span></div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="${pid}_bar" style="width:30%"></div></div>
+    </div>`);
+
+    try {
+      const result = await uploadFileToDrive(file, folderId, displayName, category);
+      document.getElementById(pid+'_bar').style.width = '100%';
+      document.getElementById(pid+'_bar').classList.add('done');
+      document.getElementById(pid+'_pct').textContent = '✓ Uploaded';
+
+      if (!docMeta[activeDocClientId]) docMeta[activeDocClientId] = [];
+      docMeta[activeDocClientId].push({
+        driveFileId: result.id,
+        clientId: activeDocClientId,
+        fileName: file.name,
+        displayName,
+        category,
+        size: file.size,
+        webViewLink: result.webViewLink,
+        uploadedAt: Date.now()
+      });
+      await saveData();
+      showToast(`${displayName} Drive pe save hua ✓`, 'success');
+    } catch(e) {
+      document.getElementById(pid+'_bar').classList.add('error');
+      document.getElementById(pid+'_pct').textContent = '✗ Failed';
+      showToast('Upload fail: ' + e.message, 'error');
+    }
+  }
+
+  document.getElementById("docTagName").value = '';
+  refreshQuickDocList();
+  renderStats();
+}
+
+async function deleteDoc(driveFileId, clientId) {
+  if (!confirm("Kya aap yeh document Drive se delete karna chahte hain?")) return;
+  try {
+    await deleteFromDrive(driveFileId);
+    docMeta[clientId] = (docMeta[clientId]||[]).filter(d=>d.driveFileId!==driveFileId);
+    await saveData();
+    showToast('Document delete hua ✓');
+    if (activeDocClientId) refreshQuickDocList();
+    renderDocsTab(); renderStats(); renderClients();
+  } catch(e) {
+    showToast('Delete fail: ' + e.message, 'error');
+  }
+}
+
+// ===== CLIENT CRUD =====
+function toggleExpand(id) { document.getElementById("exp-"+id).classList.toggle("open"); }
+
+function switchTab(t, btn) {
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.getElementById(t).classList.add("active");
+  btn.classList.add("active");
+  if(t==="deadlines") renderDeadlines();
+  if(t==="docs") renderDocsTab();
+}
+
+function openAddModal() {
+  editId = null;
+  document.getElementById("modalTitle").textContent = "Naya Client Add Karein";
+  ["name","pan","gst","mobile","email","notes","deadline","dlreason"].forEach(f=>document.getElementById("f-"+f).value="");
+  ["gst","itr","audit","tds"].forEach(s=>document.getElementById("s-"+s).checked=false);
+  document.getElementById("f-btype").value="Proprietorship";
+  document.getElementById("f-status").value="Active";
+  document.getElementById("modalBg").classList.add("open");
+}
+
+function editClient(id) {
+  const c = clients.find(x=>x.id==id); editId = id;
+  document.getElementById("modalTitle").textContent = "Client Edit Karein";
+  document.getElementById("f-name").value=c.name;
+  document.getElementById("f-pan").value=c.pan||"";
+  document.getElementById("f-gst").value=c.gst||"";
+  document.getElementById("f-mobile").value=c.mobile||"";
+  document.getElementById("f-email").value=c.email||"";
+  document.getElementById("f-btype").value=c.btype||"Proprietorship";
+  document.getElementById("f-deadline").value=c.deadline||"";
+  document.getElementById("f-dlreason").value=c.dlreason||"";
+  document.getElementById("f-notes").value=c.notes||"";
+  document.getElementById("f-status").value=c.status||"Active";
+  ["gst","itr","audit","tds"].forEach(s=>document.getElementById("s-"+s).checked=c.services.includes(s.toUpperCase()));
+  document.getElementById("modalBg").classList.add("open");
+}
+
+function closeModal() { document.getElementById("modalBg").classList.remove("open"); }
+
+async function saveClient() {
+  const name = document.getElementById("f-name").value.trim();
+  if (!name) { alert("Client ka naam zaroori hai!"); return; }
+  const services = ["GST","ITR","Audit","TDS"].filter((_,i)=>document.getElementById("s-"+["gst","itr","audit","tds"][i]).checked);
+  const data = {
+    name, pan:document.getElementById("f-pan").value.trim().toUpperCase(),
+    gst:document.getElementById("f-gst").value.trim(),
+    mobile:document.getElementById("f-mobile").value.trim(),
+    email:document.getElementById("f-email").value.trim(),
+    btype:document.getElementById("f-btype").value, services,
+    deadline:document.getElementById("f-deadline").value,
+    dlreason:document.getElementById("f-dlreason").value.trim(),
+    notes:document.getElementById("f-notes").value.trim(),
+    status:document.getElementById("f-status").value
+  };
+  if (editId) { Object.assign(clients.find(c=>c.id==editId), data); }
+  else { clients.push({id:Date.now(), ...data}); }
+  closeModal();
+  await saveData();
+  refresh();
+}
+
+async function deleteClient(id) {
+  if (!confirm("Kya aap is client ko delete karna chahte hain?")) return;
+  clients = clients.filter(c=>c.id!=id);
+  await saveData();
+  refresh();
+}
+
+function refresh() {
+  renderStats(); renderClients(); renderDeadlines();
+  if (document.getElementById("docs").classList.contains("active")) renderDocsTab();
+}
+</script>
+</body>
+</html>
